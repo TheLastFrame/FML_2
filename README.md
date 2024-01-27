@@ -5,21 +5,21 @@ ToDos:
 
 - [ ] Business/Data Understanding
 - [ ] Data Prep - Lisa
-  - [ ] cleaing e.g. unnecessary columns (or which would be problematic for ethics & data privacy)
+  - [x] cleaning e.g. unnecessary columns (or which would be problematic for ethics & data privacy)
   - [ ] feature engineering?
   - [ ] create centralized test set of all
-  - [ ] create seed for val set for reproducability
+  - [x] create seed for val set for reproducability
   - [ ] create data_prep.py (library, auch für einzel Daten für deployment?)
 - [ ] Logistic Regression Training
   - [ ] Centralized - Daniel 
   - [ ] Federated - Fabian
   - [ ] Explainability
 - [ ] SVM Training - Daniel 
-  - [ ] Centralized - 
+  - [ ] Centralized
   - [ ] Federated - Fabian
   - [ ] Explainability
 - [ ] NN Model Training (TensorFlow) - Vanessa
-  - [ ] Centralized - 
+  - [ ] Centralized
   - [ ] Federated - Fabian
   - [ ] Explainability
 - [ ] (Optional) Connection to W&B (upload stats)
