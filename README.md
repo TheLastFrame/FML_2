@@ -6,20 +6,26 @@ ToDos:
 - [ ] Business/Data Understanding
 - [ ] Data Prep - Lisa
   - [x] cleaning e.g. unnecessary columns (or which would be problematic for ethics & data privacy)
+  - [ ] test model performance with all columns available?
   - [ ] feature engineering?
-  - [ ] create centralized test set of all
+  - [x] create centralized test set of all - Fabian
   - [x] create seed for val set for reproducability
   - [ ] create data_prep.py (library, auch für einzel Daten für deployment?)
-- [ ] Logistic Regression Training
-  - [ ] Centralized - Daniel 
+  - [ ] Optimize Models?
+- [ ] Logistic Regression Training - Daniel
+  - [ ] Centralized
+  - [x] Individual for each Bank (for comparison to FML)
   - [ ] Federated - Fabian
   - [ ] Explainability
 - [ ] SVM Training - Daniel 
   - [ ] Centralized
+  - [x] Individual for each Bank (for comparison to FML)
   - [ ] Federated - Fabian
   - [ ] Explainability
 - [ ] NN Model Training (TensorFlow) - Vanessa
-  - [ ] Centralized
+  - [x] Centralized
+  - [ ] Individual for each Bank (for comparison to FML)
+  - [ ] Optimize
   - [ ] Federated - Fabian
   - [ ] Explainability
 - [ ] (Optional) Connection to W&B (upload stats)
