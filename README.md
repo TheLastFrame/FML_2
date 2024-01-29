@@ -13,12 +13,12 @@ ToDos:
   - [ ] create data_prep.py (library, auch für einzel Daten für deployment?)
   - [ ] Optimize Models?
 - [ ] Logistic Regression Training - Daniel
-  - [ ] Centralized
+  - [x] Centralized - Fabian
   - [x] Individual for each Bank (for comparison to FML)
   - [ ] Federated - Fabian
   - [ ] Explainability
 - [ ] SVM Training - Daniel 
-  - [ ] Centralized
+  - [x] Centralized - Fabian
   - [x] Individual for each Bank (for comparison to FML)
   - [ ] Federated - Fabian
   - [ ] Explainability
