@@ -15,7 +15,7 @@ ToDos:
 - [ ] Logistic Regression Training - Daniel
   - [x] Centralized - Fabian
   - [x] Individual for each Bank (for comparison to FML)
-  - [ ] Federated - Fabian
+  - [ ] (Optional) Federated - Fabian (SVC is better Model, but only slightly)
   - [ ] Explainability
 - [ ] SVM Training - Daniel 
   - [x] Centralized - Fabian
