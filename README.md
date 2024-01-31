@@ -24,7 +24,7 @@ ToDos:
   - [ ] Explainability
 - [ ] NN Model Training (TensorFlow) - Vanessa
   - [x] Centralized
-  - [ ] Individual for each Bank (for comparison to FML)
+  - [x] Individual for each Bank (for comparison to FML) - Fabian
   - [ ] Optimize
   - [ ] Federated - Fabian
   - [ ] Explainability
@@ -46,3 +46,8 @@ ToDos:
   - [ ] Fairness & Explainability
   - [ ] Security issues?!
   - [ ] Model Card?
+
+
+Thoughts:
+Compare sperately trained Bank Performance with Federated Performance (Global & bank specific data) = What could single bank achieve vs FML?
+Compare centrtal model to FML?

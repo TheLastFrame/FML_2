@@ -9,6 +9,8 @@ import random
 import time
 import os
 import numpy as np
+from sklearn.base import accuracy_score
+from sklearn.metrics import cohen_kappa_score, f1_score, log_loss, precision_score, recall_score
 
 import tensorflow as tf
 
@@ -19,7 +21,7 @@ from sklearn.utils.class_weight import compute_class_weight
 import wandb
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
 
-from utils import seed, group, config, get_model, get_data, get_test_data, get_labels
+from utils import seed, group, config, get_model, get_data, get_test_data, get_ml_model
 
 
 # tf.set_random_seed(seed)
@@ -80,59 +82,110 @@ global_config = config
 
 # %%
 class IdentifAIClient(fl.client.NumPyClient):
-    def __init__(self, model):
+    def __init__(self, model=None):
         self.model = model
 
     def get_parameters(self, config):
         print('starting parameters')
-        # with open('log_parameters.txt', 'w') as f:
-        #     f.write(str(config))
-        # print(global_config)
         if self.model == None:
-            self.model = get_model(global_config)
-            print('new model created')
-        print('ending parameters')
-        return self.model.get_weights()
+            if global_config["model_type"] == 'NN':
+                X_train, _y_train, _X_val, _y_val = get_data(str(client_number), labels_as_int=True)        
+                input_shape = [X_train.shape[1]]
+                self.model = get_model(global_config, input_shape)
+                print('new model created')
+                print('ending parameters')
+                return self.model.get_weights()
+            else: 
+                self.model = get_ml_model(model_type=global_config["model_type"])
+                print('new model created')
+                print('ending parameters')
+                return self.model.get_params()
 
     def fit(self, parameters, config):
         print('starting fit')
-        # with open('log.txt', 'w') as f:
-        #     f.write(str(config))
-        # print(global_config)
-        train_generator, val_generator = get_data(global_config)
+        if global_config["model_type"] == 'NN':
+            return self._fit_nn(parameters)
+        else:
+            return self._fit_ml(parameters)
+    
+    def _fit_nn(self, parameters):
+        X_train, y_train, X_val, y_val = get_data(str(client_number), labels_as_int=True)   
+        X_train = X_train.astype('float32')
+        X_test = X_test.astype('float32')
+        y_train = y_train.astype('float32')
+        y_test = y_test.astype('float32')
         if self.model == None:
-            self.model = get_model(global_config, train_generator, parameters)
+            input_shape = [X_train.shape[1]]
+            self.model = get_model(global_config, input_shape, parameters)
             print('new model created')
         else:
             self.model.set_weights(parameters)
-        history = self.model.fit(train_generator,
+        history = self.model.fit(
+                X_train, y_train,
+                validation_data=(X_val, y_val),
                 epochs=global_config["epochs"],
-                steps_per_epoch = 10,
+                # steps_per_epoch = 10,
                 callbacks=[
-                            WandbMetricsLogger(log_freq=5),
-                            WandbModelCheckpoint(group+'/'+client_number+'/wandb_save_models')
-                            ],
-                validation_data=val_generator)
+                            # WandbMetricsLogger(log_freq=5),
+                            # WandbModelCheckpoint(group+'/'+client_number+'/wandb_save_models')
+                            ]
+                )
         # wandb.run.summary['labels'] = get_labels(train_generator)
 
         # Get the last training accuracy
-        accuracy = history.history['categorical_accuracy'][-1]
+        accuracy = history.history['binary_accuracy'][-1]
         recall = history.history['recall'][-1]
         precision = history.history['precision'][-1]
-        cohen_kappa = history.history['cohen_kappa'][-1]
+        # cohen_kappa = history.history['cohen_kappa'][-1]
         print('ending fit')
-        # return tuple([self.model.get_weights(), len(train_generator.filenames), {'categorical_accuracy': accuracy}]) #last is metrics
-        return self.model.get_weights(), len(train_generator.filenames), {'categorical_accuracy': accuracy, "recall": recall, "precision": precision, "cohen_kappa": cohen_kappa} #last is metrics
+        return self.model.get_weights(), len(X_train), {'binary_accuracy': accuracy, "recall": recall, "precision": precision}
+
+    def _fit_ml(self, parameters):
+        X_train, y_train, X_val, y_val = get_data(str(client_number))
+        if self.model == None:
+            self.model = get_ml_model(global_config["model_type"], parameters)
+            print('new model created')
+        else:
+            self.model.set_params(parameters)
+
+        # Get the last training accuracy
+        self.model.fit(X_train, y_train)
+        
+        # Vorhersagen
+        predictions = self.model.predict(X_val)
+        
+        # Metriken
+        accuracy = accuracy_score(y_val, predictions)
+        precision = precision_score(y_val, predictions, pos_label='>50K')
+        recall = recall_score(y_val, predictions, pos_label='>50K')
+        f1 = f1_score(y_val, predictions, pos_label='>50K')
+        kappa = cohen_kappa_score(y_val, predictions)
+        
+        print('ending fit')
+        # Ergebnisse speichern
+        return self.model.get_params(), len(X_train), {'accuracy': accuracy, "recall": recall, "precision": precision, "f1": f1, "cohen_kappa": kappa}
+
 
     def evaluate(self, parameters, config):
         print('starting evaluate')
-        test_generator = get_test_data(global_config)
+        if global_config["model_type"] == 'NN':
+            return self._evaluate_nn(parameters)
+        else:
+            return self._evaluate_ml(parameters)
+        
+    def _evaluate_nn(self, parameters):
+        X_test, y_test = get_test_data(str(client_number))
+        X_train = X_train.astype('float32')
+        X_test = X_test.astype('float32')
+        y_train = y_train.astype('float32')
+        y_test = y_test.astype('float32')
         if self.model == None:
-            self.model = get_model(global_config, test_generator,parameters)
+            input_shape = [X_test.shape[1]]
+            self.model = get_model(global_config, input_shape, parameters)
             print('new model created')
         else:
             self.model.set_weights(parameters)
-        eval = self.model.evaluate(test_generator, return_dict = True)
+        eval = self.model.evaluate(X_test, y_test, return_dict = True)
         #TODO: add metrics to wandb
         # wandb.log({'client_eval/loss': eval['loss']})
         # wandb.log({'client_eval/categorical_accuracy': eval['categorical_accuracy']})
@@ -140,12 +193,43 @@ class IdentifAIClient(fl.client.NumPyClient):
         # wandb.log({'client_eval/precision': eval['precision']})
         # wandb.log({'client_eval/cohen_kappa': eval['cohen_kappa']})# , commit=True
         print('ending evaluate')
-        return eval['loss'], len(test_generator.filenames), eval
+        return eval['loss'], len(X_test), eval
+    
+    def _evaluate_ml(self, parameters):
+        X_test, y_test = get_test_data(str(client_number))
+
+        if self.model == None:
+            self.model = get_ml_model(global_config["model_type"], parameters)
+            print('new model created')
+        else:
+            self.model.set_params(parameters)
+        # Store the predictions in a variable
+        predictions_proba = self.model.predict_proba(X_test)
+
+        # Use the stored predictions
+        predictions = np.argmax(predictions_proba, axis=1)
+
+        # Calculate the loss
+        loss = log_loss(y_test, predictions_proba)
+        
+        # Metriken
+        accuracy = accuracy_score(y_test, predictions)
+        precision = precision_score(y_test, predictions, pos_label='>50K')
+        recall = recall_score(y_test, predictions, pos_label='>50K')
+        f1 = f1_score(y_test, predictions, pos_label='>50K')
+        kappa = cohen_kappa_score(y_test, predictions)
+
+        return loss, len(X_test), {'loss': loss, 'accuracy': accuracy, "recall": recall, "precision": precision, "f1": f1, "cohen_kappa": kappa}
 
 
-train_generator, val_generator = get_data(global_config)
-client = IdentifAIClient(get_model(global_config, train_generator))
-train_generator = None
-val_generator = None
+
+X_train, y_train, X_val, y_val = get_data(str(client_number))
+if global_config["model_type"] == 'NN':
+    input_shape = [X_train.shape[1]]
+    client = IdentifAIClient(get_model(global_config, input_shape))
+else:
+    client = IdentifAIClient(get_ml_model(global_config["model_type"]))
+# train_generator = None
+# val_generator = None
 time.sleep(15)
 fl.client.start_numpy_client(server_address="server:8080", client=client)
