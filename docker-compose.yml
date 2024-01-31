@@ -1,0 +1,52 @@
+version: '3'
+
+services:
+  server:
+    image: fml-1-server
+    hostname: server
+    ports:
+      - "8080:8080"
+    volumes:
+      - "/mnt/f/Daten/Privat/Projekte/#01_Active_Projects/08_FML_2/:/app"
+    container_name: server
+    networks:
+      mynetwork:
+
+  clientA:
+    image: fml-1-client
+    container_name: clientA
+    environment:
+      - CLIENT_NUMBER=A
+    volumes:
+      - "/mnt/f/Daten/Privat/Projekte/#01_Active_Projects/08_FML_2/:/app"
+    depends_on:
+      - server
+    networks:
+      mynetwork:
+
+  clientB:
+    image: fml-1-client
+    container_name: clientB
+    environment:
+      - CLIENT_NUMBER=B
+    volumes:
+      - "/mnt/f/Daten/Privat/Projekte/#01_Active_Projects/08_FML_2/:/app"
+    depends_on:
+      - server
+    networks:
+      - mynetwork
+
+  clientC:
+    image: fml-1-client
+    container_name: clientC
+    environment:
+      - CLIENT_NUMBER=C
+    volumes:
+      - "/mnt/f/Daten/Privat/Projekte/#01_Active_Projects/08_FML_2/:/app"
+    depends_on:
+      - server
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:

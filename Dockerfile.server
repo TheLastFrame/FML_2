@@ -1,0 +1,32 @@
+FROM tensorflow/tensorflow:2.15.0-gpu
+#COPY *.ipynb /app/
+#COPY *.py /app/
+RUN apt update
+RUN apt install -y python3
+RUN apt install -y python3-dev python3-pip
+RUN pip install --upgrade pip
+RUN pip install wandb
+# RUN pip install jupyterlab
+RUN pip install pandas
+RUN pip install scipy
+# RUN pip install --upgrade tensorflow-federated
+RUN pip install flwr
+# RUN pip install tensorflow-addons
+RUN pip install scikit-learn
+RUN pip install matplotlib
+# RUN pip install split-folders
+# RUN apt-get update
+# RUN apt-get install ffmpeg libsm6 libxext6  -y
+# RUN pip install opencv-python
+# RUN pip install scikit-image
+# RUN pip install seaborn
+# RUN pip install streamlit
+RUN pip install --upgrade attrs
+# RUN pip install -U autoalbument
+# RUN pip install -U tensorboard
+
+EXPOSE 8080
+
+WORKDIR /app
+
+CMD ["python3", "server.py"]
