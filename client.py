@@ -111,9 +111,9 @@ class IdentifAIClient(fl.client.NumPyClient):
     def _fit_nn(self, parameters):
         X_train, y_train, X_val, y_val = get_data(str(client_number), labels_as_int=True)   
         X_train = X_train.astype('float32')
-        X_test = X_test.astype('float32')
+        X_val = X_val.astype('float32')
         y_train = y_train.astype('float32')
-        y_test = y_test.astype('float32')
+        y_val = y_val.astype('float32')
         if self.model == None:
             input_shape = [X_train.shape[1]]
             self.model = get_model(global_config, input_shape, parameters)
@@ -174,10 +174,8 @@ class IdentifAIClient(fl.client.NumPyClient):
             return self._evaluate_ml(parameters)
         
     def _evaluate_nn(self, parameters):
-        X_test, y_test = get_test_data(str(client_number))
-        X_train = X_train.astype('float32')
+        X_test, y_test = get_test_data(str(client_number), labels_as_int=True)
         X_test = X_test.astype('float32')
-        y_train = y_train.astype('float32')
         y_test = y_test.astype('float32')
         if self.model == None:
             input_shape = [X_test.shape[1]]
@@ -223,8 +221,9 @@ class IdentifAIClient(fl.client.NumPyClient):
 
 
 
-X_train, y_train, X_val, y_val = get_data(str(client_number))
+
 if global_config["model_type"] == 'NN':
+    X_train, y_train, X_val, y_val = get_data(str(client_number), labels_as_int=True)
     input_shape = [X_train.shape[1]]
     client = IdentifAIClient(get_model(global_config, input_shape))
 else:

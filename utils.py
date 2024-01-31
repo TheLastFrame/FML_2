@@ -65,35 +65,6 @@ def cohen_kappa(y_true, y_pred):
     else:
         return tf.constant(0.0, dtype=tf.float64)
 
-# def get_data(config):
-#     datagen_kwargs = dict()
-
-#     datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-#         featurewise_center = config["featurewise_center"],
-#         featurewise_std_normalization = config["featurewise_std_normalization"],
-#         zca_whitening=config["zca"],
-#         **datagen_kwargs)
-
-#     val_generator = datagen.flow_from_directory(
-#         config["val_dir"],
-#         target_size=(config["image_size"], config["image_size"]),
-#         batch_size=config["batch_size"])
-
-#     if config["do_data_augmentation"]:
-#         train_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-#             zoom_range=config["zoom_range"],
-#             **datagen_kwargs)
-#     else:
-#         train_datagen = datagen
-    
-#     train_generator = train_datagen.flow_from_directory(
-#         config["data_dir"],
-#         shuffle=True,
-#         target_size=(config["image_size"], config["image_size"]),
-#         batch_size=config["batch_size"])
-    
-#     return train_generator, val_generator
-    
 def get_data(ds_type, all_columns = False, labels_as_int=True):
     if ds_type == 'A':
         train = pd.read_csv("./BankA_Train.csv")
@@ -124,7 +95,6 @@ def get_data(ds_type, all_columns = False, labels_as_int=True):
     y_val = val['income']
 
     return X_train, y_train, X_val, y_val
-
 
 def get_test_data(ds_type, all_columns = False, labels_as_int=True):
     if ds_type == 'A':

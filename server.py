@@ -5,10 +5,12 @@ import flwr as fl
 from flwr.common import Parameters, parameters_to_ndarrays, ndarrays_to_parameters
 from flwr.simulation.ray_transport.utils import enable_tf_gpu_growth
 import numpy as np
+from sklearn.base import accuracy_score
+from sklearn.metrics import cohen_kappa_score, f1_score, log_loss, precision_score, recall_score
 import tensorflow as tf
 import wandb
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
-from utils import seed, group, config, get_model, get_data, get_test_data, get_labels
+from utils import get_ml_model, seed, group, config, get_model, get_data, get_test_data, get_labels
 
 random.seed(seed)
 tf.random.set_seed(seed)
@@ -39,27 +41,26 @@ test_dir = config["test_dir"]
 #     config=config
 # )
 
-train_generator, val_generator = get_data(config)
-model = get_model(config, train_generator)
-train_generator = None
-val_generator = None
+
+if config["model_type"] == 'NN':
+    X_test, y_test = get_test_data('All', labels_as_int=True)
+    input_shape = [X_test.shape[1]]
+    model = get_model(config, input_shape)
+else:
+    model = get_ml_model(config["model_type"])
 
 def get_config(_unused):
     return config
 
 
 #server evaluation
-def get_eval_fn(model):    
-    test_generator = get_test_data(config)
+def get_eval_fn(model):
     # model = get_model(config, test_generator)
 
-    def evaluate(server_round, parameters, configuration) :
+    def evaluate_nn(server_round, parameters, configuration) :
+        X_test, y_test = get_test_data('All', labels_as_int=True)
         model.set_weights(parameters)
-        eval = model.evaluate(test_generator,
-            verbose=1,
-            # batch_size = 1,
-            # workers = 8,
-            # use_multiprocessing = True,
+        eval = model.evaluate(X_test, y_test,
             return_dict = True)
 
         # wandb.log({"eval/loss":eval['loss']}, step=server_round)
@@ -69,13 +70,37 @@ def get_eval_fn(model):
         # wandb.log({"eval/cohen_kappa": eval['cohen_kappa']}, step=server_round)
 
         return eval['loss'], eval
+    
+    def evaluate_ml(server_round, parameters, configuration):
+        X_test, y_test = get_test_data('All')
+        model.set_params(parameters)
+        predictions_proba = model.predict_proba(X_test)
 
-    return evaluate
+        # Use the stored predictions
+        predictions = np.argmax(predictions_proba, axis=1)
+
+        # Calculate the loss
+        loss = log_loss(y_test, predictions_proba)
+        
+        # Metriken
+        accuracy = accuracy_score(y_test, predictions)
+        precision = precision_score(y_test, predictions, pos_label='>50K')
+        recall = recall_score(y_test, predictions, pos_label='>50K')
+        f1 = f1_score(y_test, predictions, pos_label='>50K')
+        kappa = cohen_kappa_score(y_test, predictions)
+
+        return loss, {'loss': loss, 'accuracy': accuracy, "recall": recall, "precision": precision, "f1": f1, "cohen_kappa": kappa}
+
+
+    if config["model_type"] == 'NN':
+        return evaluate_nn
+    else:
+        return evaluate_ml
 
 
 
-def get_base_weights(model):
-    return ndarrays_to_parameters(model.get_weights())
+# def get_base_weights(model):
+#     return ndarrays_to_parameters(model.get_weights())
 
 
 
