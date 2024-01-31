@@ -8,6 +8,14 @@ def preprocess(df_in):
     df = pd.get_dummies(df, columns=["workclass", "marital-status", "occupation", "relationship"])
     return df
 
+def preprocess_no_removes(df_in):
+    df = df_in.copy()
+    # drop_this = ["institute","education","race","gender","native-country"]
+    # df = df.drop(drop_this, axis = 1)
+    df.loc[df["relationship"].isin(["Husband", "Wife"]), "relationship"] = "Married"
+    df = pd.get_dummies(df, columns=["workclass", "marital-status", "occupation", "relationship", "institute","education","race","gender","native-country"])
+    return df
+
 
 
 #daniel
