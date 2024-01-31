@@ -15,7 +15,7 @@ random_state = 42
 
 val_split_seed = 0
 
-group = 'test-more-metrics'
+group = 'test-fml-2'
 
 config={
         "random_seed": seed,

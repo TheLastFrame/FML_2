@@ -5,8 +5,7 @@ import flwr as fl
 from flwr.common import Parameters, parameters_to_ndarrays, ndarrays_to_parameters
 from flwr.simulation.ray_transport.utils import enable_tf_gpu_growth
 import numpy as np
-from sklearn.base import accuracy_score
-from sklearn.metrics import cohen_kappa_score, f1_score, log_loss, precision_score, recall_score
+from sklearn.metrics import accuracy_score, cohen_kappa_score, f1_score, log_loss, precision_score, recall_score
 import tensorflow as tf
 import wandb
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
@@ -59,6 +58,8 @@ def get_eval_fn(model):
 
     def evaluate_nn(server_round, parameters, configuration) :
         X_test, y_test = get_test_data('All', labels_as_int=True)
+        X_test = X_test.astype('float32')
+        y_test = y_test.astype('float32')
         model.set_weights(parameters)
         eval = model.evaluate(X_test, y_test,
             return_dict = True)

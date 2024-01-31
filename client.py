@@ -9,8 +9,7 @@ import random
 import time
 import os
 import numpy as np
-from sklearn.base import accuracy_score
-from sklearn.metrics import cohen_kappa_score, f1_score, log_loss, precision_score, recall_score
+from sklearn.metrics import accuracy_score, cohen_kappa_score, f1_score, log_loss, precision_score, recall_score
 
 import tensorflow as tf
 
@@ -99,6 +98,12 @@ class IdentifAIClient(fl.client.NumPyClient):
                 self.model = get_ml_model(model_type=global_config["model_type"])
                 print('new model created')
                 print('ending parameters')
+                return self.model.get_params()
+        else:
+            print('ending parameters')
+            if global_config["model_type"] == 'NN':
+                return self.model.get_weights()
+            else:
                 return self.model.get_params()
 
     def fit(self, parameters, config):
@@ -230,5 +235,5 @@ else:
     client = IdentifAIClient(get_ml_model(global_config["model_type"]))
 # train_generator = None
 # val_generator = None
-time.sleep(15)
-fl.client.start_numpy_client(server_address="server:8080", client=client)
+time.sleep(30)
+fl.client.start_numpy_client(server_address="fmlsserver:8080", client=client)
