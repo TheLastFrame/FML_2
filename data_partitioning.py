@@ -22,7 +22,7 @@ c = pd.read_csv("./BankC.csv")
 strata_column = 'income'
 
 # Create Test Sets
-train_a, test_a = train_test_split(a, test_size=0.1, random_state=seed, stratify=[strata_column])
+train_a, test_a = train_test_split(a, test_size=0.1, random_state=seed, stratify=a[strata_column])
 train_b, test_b = train_test_split(b, test_size=0.1, random_state=seed, stratify=b[strata_column])
 train_c, test_c = train_test_split(c, test_size=0.1, random_state=seed, stratify=c[strata_column])
 
