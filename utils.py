@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from numpy.random import RandomState
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -15,7 +17,7 @@ random_state = 42
 
 val_split_seed = 0
 
-group = 'test-fml-2'
+group = 'fml-2-nn-2'
 
 config={
         "random_seed": seed,
@@ -27,12 +29,12 @@ config={
         "gpu": False,
         # "cpu_per_client": 16,
         # "gpu_per_client": 0,
-        "num_clients": 1,
-        "num_rounds": 2, #3,
+        "num_clients": 3,
+        "num_rounds": 10, #3,
         # "model_arch": 'eV2B0', #eV2L, eV2S, custom. eV2B0
         "model_type": 'NN', #NN, SVC, GradientBoostingClassifier, LogisticRegression
         "auto_rescaling":True,
-        "epochs": 2, #5
+        "epochs": 15, #5
         "fine_tune_at": 100,
         "lr": 'noCustomLr', # noCustomLr, 1e-X (5)
         "batch_size": 16, # 3080 can't handle 32 in normal mode (efficientNetV2L)
@@ -67,14 +69,14 @@ def cohen_kappa(y_true, y_pred):
 
 def get_data(ds_type, all_columns = False, labels_as_int=True):
     if ds_type == 'A':
-        train = pd.read_csv("./BankA_Train.csv")
-        val = pd.read_csv("./BankA_Val.csv")
+        train = pd.read_csv("./BankA_Train.csv", index_col=0)
+        val = pd.read_csv("./BankA_Val.csv", index_col=0)
     elif ds_type == 'B':
-        train = pd.read_csv("./BankB_Train.csv")
-        val = pd.read_csv("./BankB_Val.csv")
+        train = pd.read_csv("./BankB_Train.csv", index_col=0)
+        val = pd.read_csv("./BankB_Val.csv", index_col=0)
     elif ds_type == 'C':
-        train = pd.read_csv("./BankC_Train.csv")
-        val = pd.read_csv("./BankC_Val.csv")
+        train = pd.read_csv("./BankC_Train.csv", index_col=0)
+        val = pd.read_csv("./BankC_Val.csv", index_col=0)
     else:
         raise ValueError("Invalid dataset type")
     
@@ -98,13 +100,13 @@ def get_data(ds_type, all_columns = False, labels_as_int=True):
 
 def get_test_data(ds_type, all_columns = False, labels_as_int=True):
     if ds_type == 'A':
-        test = pd.read_csv("./BankA_Test.csv")
+        test = pd.read_csv("./BankA_Test.csv", index_col=0)
     elif ds_type == 'B':
-        test = pd.read_csv("./BankB_Test.csv")
+        test = pd.read_csv("./BankB_Test.csv", index_col=0)
     elif ds_type == 'C':
-        test = pd.read_csv("./BankC_Test.csv")
+        test = pd.read_csv("./BankC_Test.csv", index_col=0)
     else:
-        test = pd.read_csv("./All_Banks_Test.csv")
+        test = pd.read_csv("./All_Banks_Test.csv", index_col=0)
 
     if all_columns:
         test = preprocess_no_removes(test)
@@ -176,6 +178,117 @@ def get_ml_model(model_type='SVC', parameters=None):
         raise ValueError("Invalid model type")
 
     if parameters is not None:
-        model.set_params(parameters)
+        model = set_model_params(model, parameters, model_type)
     
+    return model
+
+
+def get_model_params(model, model_type='SVC'):
+    if model_type == 'NN':
+        return model.get_weights()
+    elif model_type == 'SVC':
+        params = []
+
+        # Check if the model has been fitted
+        if hasattr(model, 'dual_coef_'):
+            params.extend([
+                model.support_,
+                model.support_vectors_,
+                model.n_support_,
+                model.dual_coef_,
+                model.coef0,
+            ])
+            if model.decision_function_shape in ['ovo', 'ovr'] and len(model.classes_) == 2:
+                params.append(model.intercept_)
+            params.extend([
+                model.fit_status_,
+                model.probA_,
+                model.probB_
+            ])
+        else:
+            params.extend([
+                model.C,
+                model.degree,
+                model.gamma,
+                model.coef0,
+                model.shrinking,
+                model.probability,
+                model.tol,
+                model.cache_size,
+                model.max_iter,
+                model.break_ties,
+                model.random_state,
+            ])
+
+        return params
+    elif model_type == 'GradientBoostingClassifier': #TODO: check if this is correct (untested)
+        params = [
+            model.estimators_,
+            model.feature_importances_,
+            model.oob_improvement_,
+            model.estimators_,
+        ]
+        return params
+    elif model_type == 'LogisticRegression': #TODO: check if this is correct (untested)
+        params = [
+            model.coef_,
+            model.intercept_,
+        ]
+        return params
+    else:
+        raise ValueError("Invalid model type")
+    
+def set_model_params(model, params, model_type='SVC'):
+    if model_type == 'NN':
+        model.set_weights(params)
+    elif model_type == 'SVC':
+        if hasattr(model, 'dual_coef_'):
+            model.support_, model.support_vectors_, model.n_support_, model.dual_coef_, model.coef0 = params[:5]
+            if model.decision_function_shape in ['ovo', 'ovr'] and len(model.classes_) == 2:
+                model.intercept_ = params[5]
+                params = params[6:]
+            else:
+                params = params[5:]
+            model.fit_status_, model.probA_, model.probB_ = params
+        else:
+            # Ensure that the 'C' parameter is a float
+            model.C = float(params[0])
+            # Ensure that the 'degree' parameter is an integer
+            model.degree = int(params[1])
+            # Ensure that the 'gamma' parameter is a string among {'scale', 'auto'} or a float
+            if str(params[2]) in ['scale', 'auto']:
+                model.gamma = str(params[2])
+            else:
+                try:
+                    model.gamma = float(params[2])
+                except ValueError:
+                    raise ValueError("Invalid value for 'gamma'. It must be either 'scale', 'auto' or a float.")
+            # Ensure that the 'coef0' parameter is a float
+            model.coef0 = float(params[3])
+            # Ensure that the 'shrinking' parameter is a boolean
+            model.shrinking = bool(params[4])
+            # Ensure that the 'probability' parameter is a boolean or a numpy boolean
+            model.probability = params[5] if isinstance(params[5], (bool, np.bool_)) else bool(params[5])
+            # Ensure that the 'tol' parameter is a float
+            model.tol = float(params[6])
+            # Ensure that the 'cache_size' parameter is a float
+            model.cache_size = float(params[7])
+            model.max_iter = int(params[8])
+            # Ensure that the 'break_ties' parameter is a boolean
+            model.break_ties = bool(params[9])
+            # Ensure that the 'random_state' parameter is an integer, a numpy random state, or None
+            if isinstance(params[10], (int, np.integer)) or params[10] is None or isinstance(params[10], RandomState):
+                model.random_state = params[10]
+            else:
+                try:
+                    model.random_state = int(params[10])
+                except ValueError:
+                    raise ValueError("Invalid value for 'random_state'. It must be an integer, a numpy random state, or None.")
+    elif model_type == 'GradientBoostingClassifier':
+        model.estimators_, model.feature_importances_, model.oob_improvement_, model.estimators_ = params
+    elif model_type == 'LogisticRegression':
+        model.coef_, model.intercept_ = params
+    else:
+        raise ValueError("Invalid model type")
+
     return model
