@@ -78,7 +78,9 @@ def get_data(ds_type, all_columns = False, labels_as_int=True):
         train = pd.read_csv("./BankC_Train.csv", index_col=0)
         val = pd.read_csv("./BankC_Val.csv", index_col=0)
     else:
-        raise ValueError("Invalid dataset type")
+        train = pd.read_csv("./All_Banks_Train.csv", index_col=0)
+        val = pd.read_csv("./All_Banks_Val.csv", index_col=0)
+
     
     if all_columns:
         train = preprocess_no_removes(train)
