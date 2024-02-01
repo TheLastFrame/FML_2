@@ -8,6 +8,7 @@ from sklearn.metrics import cohen_kappa_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.svm import SVC
+from sklearn.utils import resample
 
 from datapreprocessing import preprocess, preprocess_no_removes
 
@@ -67,7 +68,7 @@ def cohen_kappa(y_true, y_pred):
     else:
         return tf.constant(0.0, dtype=tf.float64)
 
-def get_data(ds_type, all_columns = False, labels_as_int=True):
+def get_data(ds_type, all_columns = False, labels_as_int=True, balance_train=False):
     if ds_type == 'A':
         train = pd.read_csv("./BankA_Train.csv", index_col=0)
         val = pd.read_csv("./BankA_Val.csv", index_col=0)
@@ -81,6 +82,38 @@ def get_data(ds_type, all_columns = False, labels_as_int=True):
         train = pd.read_csv("./All_Banks_Train.csv", index_col=0)
         val = pd.read_csv("./All_Banks_Val.csv", index_col=0)
 
+    if balance_train:
+        # Calculate the number of samples in each class
+        num_class0 = len(train[train.income=='<=50K'])
+        num_class1 = len(train[train.income=='>50K'])
+
+        # Determine the majority and minority classes
+        if num_class0 > num_class1:
+            df_majority = train[train.income=='<=50K']
+            df_minority = train[train.income=='>50K']
+        else:
+            df_majority = train[train.income=='>50K']
+            df_minority = train[train.income=='<=50K']
+
+        print('Majority class size: ', num_class0)
+
+        # Get the mean amount of data between the income labels
+        mean_samples = int((len(df_majority) + len(df_minority)) // 2)
+
+        # Upsample minority class
+        df_minority_upsampled = resample(df_minority, 
+                                         replace=True,     # sample with replacement
+                                         n_samples=mean_samples,    # to match majority class
+                                         random_state=random_state) # reproducible results
+
+        # Downsample majority class
+        df_majority_downsampled = resample(df_majority, 
+                                           replace=False,    # sample without replacement
+                                           n_samples=mean_samples,     # to match minority class
+                                           random_state=random_state) # reproducible results
+
+        # Combine majority class with upsampled minority class
+        train = pd.concat([df_majority_downsampled, df_minority_upsampled])
     
     if all_columns:
         train = preprocess_no_removes(train)
