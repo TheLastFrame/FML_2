@@ -10,7 +10,7 @@ ToDos:
   - [ ] feature engineering?
   - [x] create centralized test set of all - Fabian
   - [x] create seed for val set for reproducability
-  - [ ] create data_prep.py (library, auch für einzel Daten für deployment?)
+  - [x] create data_prep.py (library, auch für einzel Daten für deployment?)
   - [ ] Optimize Models?
 - [ ] Logistic Regression Training - Daniel
   - [x] Centralized - Fabian
@@ -25,8 +25,8 @@ ToDos:
 - [ ] NN Model Training (TensorFlow) - Vanessa
   - [x] Centralized
   - [x] Individual for each Bank (for comparison to FML) - Fabian
-  - [ ] Optimize
-  - [ ] Federated - Fabian
+  - [x] Optimize - hat Vanessa gut gemacht 😉
+  - [x] Federated - Fabian
   - [ ] Explainability
 - [ ] (Optional) Connection to W&B (upload stats)
   - [ ] Explainability
@@ -37,9 +37,9 @@ ToDos:
 - [ ] Security issues?!
 - [ ] Model Card?
 - [ ] Präsentation (ans CRISP-DM anpassen)
-  - [ ] Results of Business/Data Understanding
-  - [ ] Results of Feature Engineering
-  - [ ] FL Model Performance
+  - [x] Results of Business/Data Understanding
+  - [x] Results of Feature Engineering
+  - [ ] FL Model Performance (Centralized vs. FML vs 3x NN)
   - [ ] Comparison to centralized Model (per bank?)
   - [ ] Comparison to simpler non-NN Model_(s) (performance & acc)
   - [ ] Performance Criteria (Precision?)
@@ -51,3 +51,15 @@ ToDos:
 Thoughts:
 Compare sperately trained Bank Performance with Federated Performance (Global & bank specific data) = What could single bank achieve vs FML?
 Compare centrtal model to FML?
+
+Thursday ToDos:
+- [x] Centralized NN (Track?)
+    - [x] inference time per element = 610us/step
+    - [x] eval per bank data
+- [x] 3 seperate NN per bank
+- [ ] Logistic Regression 
+    - [ ] inference time per element 
+- [x] NN Explainability
+- [ ] (Optional) Model Cards
+
+
