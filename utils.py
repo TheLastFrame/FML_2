@@ -18,7 +18,7 @@ random_state = 42
 
 val_split_seed = 0
 
-group = 'fml-2-nn-2'
+group = 'fml-2-nn-final'
 
 config={
         "random_seed": seed,
@@ -161,6 +161,25 @@ def get_labels(train_generator):
     return '\n'.join(sorted(train_generator.class_indices.keys()))
 
 def get_model(config, input_shape, weights=None):
+    #Vanessa
+    # model = keras.Sequential([
+    #     layers.BatchNormalization(input_shape=input_shape),
+    #     # layers.Dense(1028, activation='relu'),
+    #     # layers.BatchNormalization(),
+    #     # layers.Dropout(0.3),
+    #     # layers.Dense(512, activation='relu'),
+    #     # layers.BatchNormalization(),
+    #     # layers.Dropout(0.3),
+    #     layers.Dense(256, activation='relu'),
+    #     layers.BatchNormalization(),
+    #     layers.Dropout(0.3),
+    #     layers.Dense(256, activation='relu'), 
+    #     layers.BatchNormalization(),
+    #     layers.Dropout(0.3),
+    #     layers.Dense(1, activation='sigmoid'),
+    # ])
+
+    #Daniel optimized
     model = keras.Sequential([
         layers.BatchNormalization(input_shape=input_shape),
         # layers.Dense(1028, activation='relu'),
@@ -169,14 +188,15 @@ def get_model(config, input_shape, weights=None):
         # layers.Dense(512, activation='relu'),
         # layers.BatchNormalization(),
         # layers.Dropout(0.3),
-        layers.Dense(256, activation='relu'),
+        layers.Dense(1024, activation='relu'),
         layers.BatchNormalization(),
-        layers.Dropout(0.3),
-        layers.Dense(256, activation='relu'), 
+        layers.Dropout(0.4),
+        layers.Dense(512, activation='relu'), 
         layers.BatchNormalization(),
-        layers.Dropout(0.3),
+        layers.Dropout(0.4),
         layers.Dense(1, activation='sigmoid'),
     ])
+
     
     opt = tf.keras.optimizers.Adam()
     if config["lr"] != 'noCustomLr':

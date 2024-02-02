@@ -9,7 +9,7 @@ from sklearn.metrics import accuracy_score, cohen_kappa_score, f1_score, log_los
 import tensorflow as tf
 import wandb
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
-from utils import get_ml_model, seed, group, config, get_model, get_data, get_test_data, get_labels
+from utils import get_ml_model, seed, group, config, get_model, get_data, get_test_data, get_labels, set_model_params
 
 random.seed(seed)
 tf.random.set_seed(seed)
@@ -24,23 +24,23 @@ os.environ['PYTHONHASHSEED'] = str(seed)
 # server to quite likely run global evaluation using GPU)
 enable_tf_gpu_growth()
 
-# wandb.login(key="f4f7847c29ad05b3b17541288561420a08e72a12")
+wandb.login(key="f4f7847c29ad05b3b17541288561420a08e72a12")
 
 test_dir = config["test_dir"]
 
 
-# wandb.init(
-#     # set the wandb project where this run will be logged
-#     project="fml-1",
-#     group=group,
-#     job_type="server",    
-#     # reinit=True,
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="fml-2",
+    group=group,
+    job_type="server",    
+    # reinit=True,
 
-#     # track hyperparameters and run metadata with wandb.config
-#     config=config
-# )
+    # track hyperparameters and run metadata with wandb.config
+    config=config
+)
 
-
+model = None
 if config["model_type"] == 'NN':
     X_test, y_test = get_test_data('All', labels_as_int=True)
     input_shape = [X_test.shape[1]]
@@ -53,7 +53,8 @@ def get_config(_unused):
 
 
 #server evaluation
-def get_eval_fn(model):
+def get_eval_fn(model_in):
+    model = model_in
     # model = get_model(config, test_generator)
 
     def evaluate_nn(server_round, parameters, configuration) :
@@ -64,31 +65,56 @@ def get_eval_fn(model):
         eval = model.evaluate(X_test, y_test,
             return_dict = True)
 
-        # wandb.log({"eval/loss":eval['loss']}, step=server_round)
-        # wandb.log({"eval/categorical_accuracy": eval['categorical_accuracy']}, step=server_round)
-        # wandb.log({"eval/recall": eval['recall']}, step=server_round)
-        # wandb.log({"eval/precision": eval['precision']}, step=server_round)
+        wandb.log({"eval/loss":eval['loss']}, step=server_round)
+        wandb.log({"eval/binary_accuracy": eval['binary_accuracy']}, step=server_round)
+        wandb.log({"eval/recall": eval['recall']}, step=server_round)
+        wandb.log({"eval/precision": eval['precision']}, step=server_round)
         # wandb.log({"eval/cohen_kappa": eval['cohen_kappa']}, step=server_round)
 
         return eval['loss'], eval
     
     def evaluate_ml(server_round, parameters, configuration):
+        
         X_test, y_test = get_test_data('All')
-        model.set_params(parameters)
-        predictions_proba = model.predict_proba(X_test)
+        # if model is None:
+        model = get_ml_model(config["model_type"], parameters)
+        # else:
+        #     model = set_model_params(model, parameters, config["model_type"])
 
-        # Use the stored predictions
-        predictions = np.argmax(predictions_proba, axis=1)
-
-        # Calculate the loss
-        loss = log_loss(y_test, predictions_proba)
+        # Check if the model has been fitted
+        if hasattr(model, 'dual_coef_'):
+            # Check if probability is set to True
+            if getattr(model, "probability", False):
+                predictions_proba = model.predict_proba(X_test)
+                predictions = np.argmax(predictions_proba, axis=1)
+                loss = log_loss(y_test, predictions_proba)
+            else:
+                # Return default values if probability is False
+                predictions = model.predict(X_test)
+                loss = None
+            
+            precision = precision_score(y_test, predictions, pos_label=1)
+            recall = recall_score(y_test, predictions, pos_label=1)
+            f1 = f1_score(y_test, predictions, pos_label=1)
+        else:
+            # Return default values if the model is not fitted
+            predictions = np.full(y_test.shape, y_test.mode()[0] if y_test.ndim > 1 else y_test.mode())
+            loss = None
+            
+            precision = precision_score(y_test, predictions, pos_label=1)
+            recall = recall_score(y_test, predictions, pos_label=1)
+            f1 = f1_score(y_test, predictions, pos_label=1)
         
         # Metriken
         accuracy = accuracy_score(y_test, predictions)
-        precision = precision_score(y_test, predictions, pos_label='>50K')
-        recall = recall_score(y_test, predictions, pos_label='>50K')
-        f1 = f1_score(y_test, predictions, pos_label='>50K')
         kappa = cohen_kappa_score(y_test, predictions)
+
+        wandb.log({"eval/loss":loss}, step=server_round)
+        wandb.log({"eval/accuracy": accuracy}, step=server_round)
+        wandb.log({"eval/recall": recall}, step=server_round)
+        wandb.log({"eval/precision": precision}, step=server_round)
+        wandb.log({"eval/f1": f1}, step=server_round)
+        wandb.log({"eval/cohen_kappa": kappa}, step=server_round)
 
         return loss, {'loss': loss, 'accuracy': accuracy, "recall": recall, "precision": precision, "f1": f1, "cohen_kappa": kappa}
 
@@ -122,9 +148,9 @@ end = time.time()
 training_time = end - start
 print('Training time: {}'.format(time.strftime(
     "%H:%M:%S", time.gmtime(training_time))))
-# wandb.run.summary["training_time_sek"] = training_time
-# wandb.run.summary["training_time"] = time.strftime("%H:%M:%S", time.gmtime(training_time))
+wandb.run.summary["training_time_sek"] = training_time
+wandb.run.summary["training_time"] = time.strftime("%H:%M:%S", time.gmtime(training_time))
 
 print('DOOOOOOOOOOOOONE!!!!!!!!!!!')
 
-# wandb.finish()
+wandb.finish()

@@ -9,6 +9,7 @@ import random
 import time
 import os
 import numpy as np
+import pandas as pd
 from sklearn.metrics import accuracy_score, cohen_kappa_score, f1_score, log_loss, precision_score, recall_score
 
 import tensorflow as tf
@@ -20,7 +21,7 @@ from sklearn.utils.class_weight import compute_class_weight
 import wandb
 from wandb.keras import WandbMetricsLogger, WandbModelCheckpoint
 
-from utils import seed, group, config, get_model, get_data, get_test_data, get_ml_model
+from utils import seed, group, config, get_model, get_data, get_test_data, get_ml_model, set_model_params, get_model_params
 
 
 # tf.set_random_seed(seed)
@@ -38,20 +39,20 @@ print('client_number: ', client_number)
 
 
 # %%
-# wandb.login(key="f4f7847c29ad05b3b17541288561420a08e72a12")
+wandb.login(key="f4f7847c29ad05b3b17541288561420a08e72a12")
 
 # %%
-# wandb.init(
-#     # set the wandb project where this run will be logged
-#     project="fml-1",
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="fml-2",
 
-#     group=group,
-#     job_type="client",
-#     name='client_'+str(client_number),
+    group=group,
+    job_type="client",
+    name='client_'+str(client_number),
 
-#     # track hyperparameters and run metadata with wandb.config
-#     config=config
-# )
+    # track hyperparameters and run metadata with wandb.config
+    config=config
+)
 global_config = config
 
 # %% [markdown]
@@ -98,13 +99,13 @@ class IdentifAIClient(fl.client.NumPyClient):
                 self.model = get_ml_model(model_type=global_config["model_type"])
                 print('new model created')
                 print('ending parameters')
-                return self.model.get_params()
+                return get_model_params(self.model, global_config["model_type"])
         else:
             print('ending parameters')
             if global_config["model_type"] == 'NN':
                 return self.model.get_weights()
             else:
-                return self.model.get_params()
+                return get_model_params(self.model, global_config["model_type"])
 
     def fit(self, parameters, config):
         print('starting fit')
@@ -131,8 +132,8 @@ class IdentifAIClient(fl.client.NumPyClient):
                 epochs=global_config["epochs"],
                 # steps_per_epoch = 10,
                 callbacks=[
-                            # WandbMetricsLogger(log_freq=5),
-                            # WandbModelCheckpoint(group+'/'+client_number+'/wandb_save_models')
+                            WandbMetricsLogger(log_freq=5),
+                            WandbModelCheckpoint(group+'/'+client_number+'/wandb_save_models')
                             ]
                 )
         # wandb.run.summary['labels'] = get_labels(train_generator)
@@ -151,7 +152,7 @@ class IdentifAIClient(fl.client.NumPyClient):
             self.model = get_ml_model(global_config["model_type"], parameters)
             print('new model created')
         else:
-            self.model.set_params(parameters)
+            self.model = set_model_params(self.model, parameters, global_config["model_type"])
 
         # Get the last training accuracy
         self.model.fit(X_train, y_train)
@@ -161,14 +162,16 @@ class IdentifAIClient(fl.client.NumPyClient):
         
         # Metriken
         accuracy = accuracy_score(y_val, predictions)
-        precision = precision_score(y_val, predictions, pos_label='>50K')
-        recall = recall_score(y_val, predictions, pos_label='>50K')
-        f1 = f1_score(y_val, predictions, pos_label='>50K')
+        precision = precision_score(y_val, predictions, pos_label=1)
+        recall = recall_score(y_val, predictions, pos_label=1)
+        f1 = f1_score(y_val, predictions, pos_label=1)
         kappa = cohen_kappa_score(y_val, predictions)
         
         print('ending fit')
         # Ergebnisse speichern
-        return self.model.get_params(), len(X_train), {'accuracy': accuracy, "recall": recall, "precision": precision, "f1": f1, "cohen_kappa": kappa}
+
+        params = get_model_params(self.model, global_config["model_type"])
+        return params, len(X_train), {'accuracy': accuracy, "recall": recall, "precision": precision, "f1": f1, "cohen_kappa": kappa}
 
 
     def evaluate(self, parameters, config):
@@ -190,10 +193,10 @@ class IdentifAIClient(fl.client.NumPyClient):
             self.model.set_weights(parameters)
         eval = self.model.evaluate(X_test, y_test, return_dict = True)
         #TODO: add metrics to wandb
-        # wandb.log({'client_eval/loss': eval['loss']})
-        # wandb.log({'client_eval/categorical_accuracy': eval['categorical_accuracy']})
-        # wandb.log({'client_eval/recall': eval['recall']})
-        # wandb.log({'client_eval/precision': eval['precision']})
+        wandb.log({'client_eval/loss': eval['loss']})
+        wandb.log({'client_eval/binary_accuracy': eval['binary_accuracy']})
+        wandb.log({'client_eval/recall': eval['recall']})
+        wandb.log({'client_eval/precision': eval['precision']})
         # wandb.log({'client_eval/cohen_kappa': eval['cohen_kappa']})# , commit=True
         print('ending evaluate')
         return eval['loss'], len(X_test), eval
@@ -205,7 +208,7 @@ class IdentifAIClient(fl.client.NumPyClient):
             self.model = get_ml_model(global_config["model_type"], parameters)
             print('new model created')
         else:
-            self.model.set_params(parameters)
+            self.model = set_model_params(self.model, parameters, global_config["model_type"])
         # Store the predictions in a variable
         predictions_proba = self.model.predict_proba(X_test)
 
@@ -217,9 +220,9 @@ class IdentifAIClient(fl.client.NumPyClient):
         
         # Metriken
         accuracy = accuracy_score(y_test, predictions)
-        precision = precision_score(y_test, predictions, pos_label='>50K')
-        recall = recall_score(y_test, predictions, pos_label='>50K')
-        f1 = f1_score(y_test, predictions, pos_label='>50K')
+        precision = precision_score(y_test, predictions, pos_label=1)
+        recall = recall_score(y_test, predictions, pos_label=1)
+        f1 = f1_score(y_test, predictions, pos_label=1)
         kappa = cohen_kappa_score(y_test, predictions)
 
         return loss, len(X_test), {'loss': loss, 'accuracy': accuracy, "recall": recall, "precision": precision, "f1": f1, "cohen_kappa": kappa}

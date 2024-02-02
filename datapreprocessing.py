@@ -2,16 +2,21 @@ import pandas as pd
 
 def preprocess(df_in):
     df = df_in.copy()
-    drop_this = ["institute","education","race","gender","native-country"]
+    # Native Country (Rassistisch?)
+    # Gender (sexismus)
+    # Race (Rassistisch!)
+    # Relationship (Husband, Wife einfach zu Married?)
+    # Educational-num oder education weg, je nach dem ob one hot encoding oder nicht
+    drop_this = ["institute","education","race","gender","native-country", "fnlwgt"]
     df = df.drop(drop_this, axis = 1)
     df.loc[df["relationship"].isin(["Husband", "Wife"]), "relationship"] = "Married"
     df = pd.get_dummies(df, columns=["workclass", "marital-status", "occupation", "relationship"])
     return df
 
 def preprocess_no_removes(df_in):
-    df = df_in.copy()
-    # drop_this = ["institute","education","race","gender","native-country"]
-    # df = df.drop(drop_this, axis = 1)
+    df = df_in.copy()    
+    drop_this = ["fnlwgt"]
+    df = df.drop(drop_this, axis = 1)
     df.loc[df["relationship"].isin(["Husband", "Wife"]), "relationship"] = "Married"
     df = pd.get_dummies(df, columns=["workclass", "marital-status", "occupation", "relationship", "institute","education","race","gender","native-country"])
     return df

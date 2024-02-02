@@ -40,11 +40,11 @@ ToDos:
   - [x] Results of Business/Data Understanding
   - [x] Results of Feature Engineering
   - [ ] FL Model Performance (Centralized vs. FML vs 3x NN)
-  - [ ] Comparison to centralized Model (per bank?)
-  - [ ] Comparison to simpler non-NN Model_(s) (performance & acc)
+  - [x] Comparison to centralized Model (per bank?)
+  - [x] Comparison to simpler non-NN Model_(s) (performance & acc)
   - [ ] Performance Criteria (Precision?)
   - [ ] Fairness & Explainability
-  - [ ] Security issues?!
+  - [x] Security issues?!
   - [ ] Model Card?
 
 
@@ -54,11 +54,11 @@ Compare centrtal model to FML?
 
 Thursday ToDos:
 - [x] Centralized NN (Track?)
-    - [x] inference time per element = 610us/step
+    - [x] inference time per element = 707us/step
     - [x] eval per bank data
 - [x] 3 seperate NN per bank
 - [ ] Logistic Regression 
-    - [ ] inference time per element 
+    - [x] inference time per element 
 - [x] NN Explainability
 - [ ] (Optional) Model Cards
 
